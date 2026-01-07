@@ -11,64 +11,52 @@ def show_cursor():
     sys.stdout.write(f"{ESC}[?25h")
     sys.stdout.flush()
 
-def clear_line():
-    sys.stdout.write(f"\r{ESC}[2K")
+def clear_screen():
+    sys.stdout.write(f"{ESC}[2J{ESC}[H")  # clear + home
     sys.stdout.flush()
 
 def rgb(r, g, b):
     return f"{ESC}[38;2;{r};{g};{b}m"
 
-def bold():
-    return f"{ESC}[1m"
-
 def reset():
     return f"{ESC}[0m"
 
-# 🔹 SABİT RENK (burayı değiştirerek ton seçersin)
-BASE_COLOR = rgb(0, 200, 255)   # Turkuaz / neon
-GLOW_COLOR = rgb(255, 255, 255) # Parlayan harf
+def bold(on=True):
+    return f"{ESC}[1m" if on else f"{ESC}[22m"
 
-def render(name, pos, glow_index):
-    spaces = " " * pos
-    out = [spaces]
+def center(text: str, width: int) -> str:
+    if len(text) >= width:
+        return text
+    left = (width - len(text)) // 2
+    return " " * left + text
 
-    for i, ch in enumerate(name):
-        if i == glow_index:
-            out.append(bold() + GLOW_COLOR + ch + reset())
-        else:
-            out.append(BASE_COLOR + ch + reset())
+def heartbeat(name: str, width: int = 60, beats: int = 30, bpm: int = 90):
+    # Tek renk tonu (istersen değiştir)
+    BASE = rgb(0, 200, 255)     # neon turkuaz
+    DIM  = rgb(0, 120, 160)     # sönük ton
+    NAME = bold(True) + rgb(255, 255, 255)  # isim beyaz-kalın
 
-    return "".join(out)
+    # Nabız karakterleri (daha "soft" istersen: "·", "•", "○", "◌")
+    ring_chars = ["·", "•", "●", "█", "●", "•", "·"]
 
-def animate(name, width=20, delay=0.04, cycles=5):
+    # BPM -> saniye per beat (yaklaşık)
+    beat_period = 60.0 / max(30, bpm)  # aşırı hızlı olmasın
+    frame_delay = beat_period / 7.0
+
     hide_cursor()
     try:
-        glow = 0
+        for _ in range(beats):
+            for k, ch in enumerate(ring_chars):
+                clear_screen()
 
-        for _ in range(cycles):
-            for pos in range(width + 1):
-                clear_line()
-                sys.stdout.write(render(name, pos, glow))
-                sys.stdout.flush()
-                glow = (glow + 1) % len(name)
-                time.sleep(delay)
+                # Nabız halkası: üst/alt çizgi + yanlarda “ch”
+                line = ch * max(0, min(width, len(name) + 18))
+                top = DIM + center(line, width) + reset()
+                mid_left = DIM + ch * 3 + reset()
+                mid_right = DIM + ch * 3 + reset()
 
-            for pos in range(width, -1, -1):
-                clear_line()
-                sys.stdout.write(render(name, pos, glow))
-                sys.stdout.flush()
-                glow = (glow + 1) % len(name)
-                time.sleep(delay)
-
-        clear_line()
-        print(render(name, 0, -1))
-    finally:
-        show_cursor()
-
-def main():
-    print("✨ Lighty name animation — single color mode")
-    name = input("Enter a name (default: Elgiz): ").strip() or "Elgiz"
-    animate(name)
-
-if __name__ == "__main__":
-    main()
+                name_line = (
+                    " " * ((width - len(name)) // 2 - 3)
+                    + mid_left
+                    + reset()
+                    + BASE + " "  # ufak
