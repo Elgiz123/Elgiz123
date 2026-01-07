@@ -15,57 +15,60 @@ def clear_line():
     sys.stdout.write(f"\r{ESC}[2K")
     sys.stdout.flush()
 
-def rgb(r: int, g: int, b: int) -> str:
-    # Truecolor (24-bit) foreground
+def rgb(r, g, b):
     return f"{ESC}[38;2;{r};{g};{b}m"
 
-def bold(on: bool = True) -> str:
-    return f"{ESC}[1m" if on else f"{ESC}[22m"
+def bold():
+    return f"{ESC}[1m"
 
-def reset() -> str:
+def reset():
     return f"{ESC}[0m"
 
-def lerp(a: int, b: int, t: float) -> int:
-    return int(a + (b - a) * t)
+# 🔹 SABİT RENK (burayı değiştirerek ton seçersin)
+BASE_COLOR = rgb(0, 200, 255)   # Turkuaz / neon
+GLOW_COLOR = rgb(255, 255, 255) # Parlayan harf
 
-def gradient_color(i: int, n: int) -> str:
-    # Mor -> Mavi -> Turkuaz gradient
-    if n <= 1:
-        t = 0.0
-    else:
-        t = i / (n - 1)
-
-    # iki aşamalı gradient: (160,80,255) -> (70,120,255) -> (0,220,200)
-    if t < 0.5:
-        t2 = t / 0.5
-        r = lerp(160, 70, t2)
-        g = lerp(80, 120, t2)
-        b = lerp(255, 255, t2)
-    else:
-        t2 = (t - 0.5) / 0.5
-        r = lerp(70, 0, t2)
-        g = lerp(120, 220, t2)
-        b = lerp(255, 200, t2)
-
-    return rgb(r, g, b)
-
-def render(name: str, pos: int, glow_index: int) -> str:
-    # pos: soldan boşluk
-    spaces = " " * max(0, pos)
+def render(name, pos, glow_index):
+    spaces = " " * pos
     out = [spaces]
 
     for i, ch in enumerate(name):
-        color = gradient_color(i, len(name))
-        # glow: bir harfi daha parlak/bold yap
         if i == glow_index:
-            out.append(bold(True) + rgb(255, 255, 255) + ch + reset())
+            out.append(bold() + GLOW_COLOR + ch + reset())
         else:
-            out.append(color + ch + reset())
+            out.append(BASE_COLOR + ch + reset())
 
     return "".join(out)
 
-def animate(name: str, width: int = 24, delay: float = 0.04, cycles: int = 4):
+def animate(name, width=20, delay=0.04, cycles=5):
     hide_cursor()
     try:
         glow = 0
-        d
+
+        for _ in range(cycles):
+            for pos in range(width + 1):
+                clear_line()
+                sys.stdout.write(render(name, pos, glow))
+                sys.stdout.flush()
+                glow = (glow + 1) % len(name)
+                time.sleep(delay)
+
+            for pos in range(width, -1, -1):
+                clear_line()
+                sys.stdout.write(render(name, pos, glow))
+                sys.stdout.flush()
+                glow = (glow + 1) % len(name)
+                time.sleep(delay)
+
+        clear_line()
+        print(render(name, 0, -1))
+    finally:
+        show_cursor()
+
+def main():
+    print("✨ Lighty name animation — single color mode")
+    name = input("Enter a name (default: Elgiz): ").strip() or "Elgiz"
+    animate(name)
+
+if __name__ == "__main__":
+    main()
